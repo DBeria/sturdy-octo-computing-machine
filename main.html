@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>სიახlove</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Patrick+Hand&family=Special+Elite&family=Poppins:wght@300;400;500;600&family=Noto+Sans+Georgian:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   PALETTE — scrapbook: warm kraft paper for "day" sections,
+   deep corkboard-navy for "night" sections. Mixed per your answer.
+   ============================================================ */
+:root{
+  --paper:      #f2e8d0;   /* kraft/cream page */
+  --paper-2:    #e9dcbc;   /* slightly darker paper for cards */
+  --ink:        #3c3226;   /* dark warm brown-black text on paper */
+  --ink-soft:   #6b5d47;
+  --night:      #1b1e2b;   /* corkboard-at-night background */
+  --night-2:    #262a3c;
+  --cream-text: #f4ecd8;
+  --tape-pink:  rgba(232,150,168,0.55);
+  --tape-yellow:rgba(240,201,110,0.6);
+  --tape-blue:  rgba(140,182,207,0.55);
+  --tape-green: rgba(150,190,140,0.5);
+  --gold:       #d9a24d;
+  --pin-red:    #b5473a;
+}
+
+html{ scroll-behavior: smooth; }
+body{
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Poppins','Noto Sans Georgian',sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+.font-hand{ font-family:'Caveat','Noto Sans Georgian',cursive; }
+.font-hand2{ font-family:'Patrick Hand','Noto Sans Georgian',cursive; }
+.font-type{ font-family:'Special Elite', monospace; }
+.font-ka{ font-family:'Noto Sans Georgian',sans-serif; }
+
+/* paper grain texture — subtle, cheap (no image asset needed) */
+.paper-texture{
+  background-image:
+    radial-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 2px 3px;
+}
+
+/* night (corkboard) sections */
+.section-night{
+  background: var(--night);
+  color: var(--cream-text);
+  position: relative;
+}
+.corkboard-texture{
+  background-image:
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 6px),
+    radial-gradient(circle at 20% 30%, rgba(217,162,77,0.08), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(140,182,207,0.06), transparent 45%);
+}
+
+#particle-canvas{ position: fixed; inset:0; z-index:0; pointer-events:none; }
+.content-layer{ position: relative; z-index: 1; }
+
+/* ---------- Washi tape strips ---------- */
+.tape{
+  position: absolute;
+  height: 26px;
+  opacity: 0.9;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.tape::after{
+  content:''; position:absolute; inset:0;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,0.25) 0 2px, transparent 2px 6px);
+}
+.tape-pink{ background: var(--tape-pink); }
+.tape-yellow{ background: var(--tape-yellow); }
+.tape-blue{ background: var(--tape-blue); }
+.tape-green{ background: var(--tape-green); }
+
+/* ---------- Hand-drawn wobbly button ---------- */
+.scrap-btn{
+  background: var(--paper-2);
+  color: var(--ink);
+  border: 2.5px solid var(--ink);
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.scrap-btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+.scrap-btn:active{ transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--ink); }
+
+/* dark-section variant button */
+.scrap-btn-night{
+  background: var(--gold);
+  color: var(--night);
+  border: 2.5px solid var(--cream-text);
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  box-shadow: 4px 4px 0 rgba(244,236,216,0.5);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.scrap-btn-night:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(244,236,216,0.6); }
+
+/* ---------- Photo cards: taped Polaroid look ---------- */
+.photo-card{
+  position: relative;
+  background: #fdfbf4;
+  padding: 10px 10px 34px 10px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform .3s ease, box-shadow .3s ease, z-index 0s;
+}
+.photo-card:hover{
+  transform: scale(1.05) rotate(0deg) !important;
+  box-shadow: 0 16px 30px rgba(0,0,0,0.35);
+  z-index: 5;
+}
+.photo-card img{
+  width:100%; aspect-ratio:1/1; object-fit:cover; display:block;
+  filter: sepia(6%) saturate(105%);
+  background:#000;
+}
+.photo-card .card-title{
+  font-family:'Caveat','Noto Sans Georgian',cursive;
+  font-size: 1.15rem; color:#2a2118; text-align:center; margin-top:8px; line-height:1;
+}
+.photo-card .card-date{ font-family:'Special Elite',monospace; font-size:.6rem; color:#8a7a5f; text-align:center; margin-top:2px; }
+.photo-card .comment-pill{
+  position:absolute; bottom:6px; right:8px;
+  font-family:'Patrick Hand',cursive; font-size:.7rem; color:#8a7a5f;
+}
+/* per-card tilt variety */
+.rot-1{ transform: rotate(-4deg); } .rot-2{ transform: rotate(3deg); }
+.rot-3{ transform: rotate(-2deg); } .rot-4{ transform: rotate(5deg); }
+.rot-5{ transform: rotate(-6deg); } .rot-6{ transform: rotate(2deg); }
+
+/* ---------- Index / flip cards for "Reasons" ---------- */
+.flip-card{ perspective:1200px; height:250px; }
+.flip-card-inner{
+  position:relative; width:100%; height:100%;
+  transition: transform .7s cubic-bezier(.4,.2,.2,1); transform-style:preserve-3d;
+}
+.flip-card.flipped .flip-card-inner{ transform: rotateY(180deg); }
+.flip-card-front,.flip-card-back{
+  position:absolute; inset:0; backface-visibility:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:1.5rem; text-align:center;
+  background: #fdfbf4;
+  border: 1px solid rgba(60,50,38,0.15);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+}
+.flip-card-front{ border-top: 6px solid var(--pin-red); }
+.flip-card-back{ background: var(--paper-2); transform: rotateY(180deg); border-top:6px solid var(--gold); }
+.pin-dot{
+  position:absolute; top:-8px; left:50%; transform: translateX(-50%);
+  width:14px; height:14px; border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, #e88b7d, var(--pin-red));
+  box-shadow: 0 3px 4px rgba(0,0,0,0.35);
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay{
+  position: fixed; inset:0; background: rgba(20,17,12,0.82); backdrop-filter: blur(4px);
+  z-index:50; display:flex; align-items:center; justify-content:center; padding:1.25rem;
+  opacity:0; pointer-events:none;
+}
+.modal-overlay.active{ pointer-events:auto; }
+.modal-box{
+  background: #fdfbf4; color: var(--ink);
+  border: 1px solid rgba(60,50,38,0.15);
+  max-width:640px; width:100%; max-height:90vh; overflow-y:auto;
+  padding: 1.75rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+.modal-box img{ width:100%; margin-bottom:1rem; max-height:55vh; object-fit:contain; background:#000; }
+.comment-item{
+  background: rgba(60,50,38,0.05); border-radius:.6rem; padding:.55rem .8rem; margin-bottom:.5rem; font-size:.9rem;
+}
+.comment-item .who{ font-family:'Caveat',cursive; color: var(--pin-red); font-weight:700; font-size:1rem; }
+
+/* ---------- Letter (journal page under lamp) ---------- */
+.journal-page{
+  background: #f8f2e0;
+  color: var(--ink);
+  background-image: repeating-linear-gradient(#f8f2e0 0 30px, rgba(60,50,38,0.08) 31px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border-radius: 2px;
+}
+
+.audio-widget{
+  position: fixed; bottom:1.25rem; right:1.25rem; z-index:40;
+   background: rgb(169 169 169 / 92%); backdrop-filter: blur(8px);
+  border: 1px solid rgba(217,162,77,0.4); border-radius: 999px;
+}
+
+::-webkit-scrollbar{ width:8px; }
+::-webkit-scrollbar-track{ background: var(--paper); }
+::-webkit-scrollbar-thumb{ background: rgba(60,50,38,0.35); border-radius:999px; }
+
+.reveal{ opacity:0; transform: translateY(35px); }
+
+/* section divider — torn paper edge */
+.torn-edge{
+  height: 34px;
+  background: var(--paper);
+  clip-path: polygon(0% 0%,4% 100%,8% 20%,12% 90%,16% 10%,20% 80%,24% 15%,28% 95%,32% 25%,36% 85%,40% 5%,44% 90%,48% 20%,52% 100%,56% 15%,60% 85%,64% 10%,68% 95%,72% 25%,76% 80%,80% 15%,84% 90%,88% 20%,92% 95%,96% 10%,100% 100%,100% 0%);
+}
+
+/* ============================================================
+   LETTER SECTION — a lamp-lit note pinned under the photos.
+   The lamp glow + pulsing "read me" tag exist so this cannot
+   be scrolled past unnoticed.
+   ============================================================ */
+#letter{
+  background: radial-gradient(ellipse 60% 50% at 50% 0%, #2b2f43 0%, var(--night) 55%), var(--night);
+}
+.lamp-cone{
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  width:min(900px,140%); height:420px;
+  background: radial-gradient(ellipse 50% 100% at 50% 0%, rgba(217,162,77,0.30) 0%, rgba(217,162,77,0.10) 40%, transparent 72%);
+  pointer-events:none;
+}
+.readme-tag{
+  position:relative;
+  display:inline-flex; align-items:center; gap:.4rem;
+  background: var(--pin-red); color:#fdece7;
+  padding:.5rem 1.1rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  transform: rotate(-3deg);
+  animation: tagPulse 2.2s ease-in-out infinite;
+}
+@keyframes tagPulse{
+  0%,100%{ transform: rotate(-3deg) scale(1); }
+  50%{ transform: rotate(-3deg) scale(1.055); }
+}
+.readme-arrow{
+  font-size:1.3rem; line-height:1; animation: arrowBob 1.4s ease-in-out infinite;
+}
+@keyframes arrowBob{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(5px); }
+}
+.paperclip{
+  position:absolute; top:-26px; left:38px; width:34px; height:56px;
+  z-index:2; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.35));
+  transform: rotate(-8deg);
+}
+.letter-word{ display:inline-block; opacity:0; transform: translateY(6px); }
+.letter-sig{
+  display:inline-block; margin-top:1.25rem;
+  border-top: 1px dashed rgba(60,50,38,0.35);
+  padding-top:.6rem;
+}
+</style>
+</head>
+
+<body class="min-h-screen">
+<canvas id="particle-canvas"></canvas>
+
+<audio id="bg-audio" loop preload="auto">
+  <source src="C:\Users\Bero\Desktop\tatasiaxlove\ნიაზ დიასამიძე & 33ა - შოთა  Niaz Diasamidze & 33A - Shota.mp3" type="audio/mpeg">
+</audio>
+
+<div class="audio-widget flex items-center gap-3 px-4 py-2.5">
+  <button id="audio-toggle" aria-label="Toggle music" class="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--gold)] text-[var(--night)] transition-transform hover:scale-105">
+    <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+    <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+  </button>
+  <span id="audio-label" class="text-xs font-hand2 text-[var(--cream-text)]/80 pr-1">ჩვენი სიმღერა</span>
+</div>
+
+<!-- ============================================================
+     HERO — corkboard at night, a taped index card floating center
+============================================================= -->
+<section id="hero" class="section-night corkboard-texture relative min-h-screen flex items-center justify-center px-6 content-layer">
+  <div class="relative max-w-lg mx-auto">
+    <div class="tape tape-yellow" style="width:120px; top:-14px; left:-20px; transform:rotate(-8deg);"></div>
+    <div class="tape tape-pink" style="width:100px; top:-14px; right:-16px; transform:rotate(10deg);"></div>
+
+    <div class="bg-[#f8f2e0] text-[var(--ink)] px-8 py-10 md:px-12 md:py-14 text-center shadow-2xl" style="transform: rotate(-1.5deg);">
+      <p class="font-hand text-2xl md:text-3xl text-[var(--pin-red)] mb-2">მიყვარხარ</p>
+      <h1 class="font-hand2 font-ka text-3xl md:text-5xl leading-tight mb-3">
+      
+      </h1>
+      <p class="font-ka text-sm md:text-base text-[var(--ink-soft)] max-w-sm mx-auto mb-8 leading-relaxed">
+        ერთი ორი ღამე გავუთენე ამას
+      </p>
+      <button id="enter-btn" class="scrap-btn font-ka font-medium px-8 py-3.5 text-base">
+        გახსენი <span class="opacity-60 mx-1"></span> 
+      </button>
+    </div>
+  </div>
+</section>
+
+<main id="main-content" class="content-layer opacity-0">
+
+  <!-- ============================================================
+       KUS TBA — stays in the "night" palette (foggy lake at night fits)
+  ============================================================= -->
+  <section id="kustba" class="section-night corkboard-texture relative py-24 px-6 overflow-hidden">
+    <div class="relative max-w-6xl mx-auto">
+      <div class="text-center mb-14 reveal">
+        <p class="font-hand text-2xl text-[var(--gold)] mb-1"></p>
+        <h2 class="font-hand2 font-ka text-3xl md:text-5xl text-[var(--cream-text)]">
+          <span class="font-poppins text-lg md:text-xl font-light text-[var(--cream-text)]/50"></span>
+        </h2>
+      </div>
+      <div id="kustba-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 reveal"></div>
+    </div>
+  </section>
+
+  <div class="torn-edge"></div>
+
+  <!-- ============================================================
+       MAIN GALLERY — kraft paper "corkboard page" with taped photos
+  ============================================================= -->
+  <section id="memories" class="relative py-24 px-6 paper-texture">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-14 reveal">
+        <p class="font-hand text-2xl text-[var(--pin-red)] mb-1"></p>
+        <h2 class="font-hand2 font-ka text-3xl md:text-5xl text-[var(--ink)]">Our Moments</h2>
+        <p class="text-[var(--ink-soft)] text-sm mt-2 font-hand2">tap any photo to open it and write the real story underneath</p>
+      </div>
+      <div id="photo-grid" class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-10 reveal"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       LETTER — a note under a lamp, right after the photos.
+       Edit LETTER_TITLE / LETTER_PARAGRAPHS / LETTER_SIGNATURE
+       in the script below to change what it says.
+  ============================================================= -->
+  <section id="letter" class="section-night relative py-28 px-6 overflow-hidden">
+    <div class="lamp-cone"></div>
+    <div class="relative max-w-2xl mx-auto flex flex-col items-center">
+
+      <div class="readme-tag font-ka text-sm mb-8 reveal">
+        <span>წაიკითხე ეს</span>
+        <span class="readme-arrow">⤵</span>
+      </div>
+
+      <div class="journal-page relative w-full px-7 py-10 md:px-12 md:py-14 reveal" style="transform: rotate(-0.6deg);">
+        <svg class="paperclip" viewBox="0 0 24 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 6 C6 2.5 9 0 12.5 0 C16 0 19 2.5 19 6 L19 27 C19 30.5 16.5 33 13 33 C9.5 33 7 30.5 7 27 L7 10 C7 8 8.5 6.5 10.5 6.5 C12.5 6.5 14 8 14 10 L14 25"
+                stroke="#9a9a9a" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+
+        <p id="letter-title" class="font-hand text-3xl md:text-4xl text-[var(--pin-red)] mb-6"></p>
+
+        <div id="letter-text" class="font-ka text-base md:text-lg leading-relaxed text-[var(--ink)]"></div>
+
+        <p id="letter-signature" class="letter-sig font-hand text-2xl text-[var(--ink-soft)]"></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-center py-14 px-6 section-night">
+    <p class="font-hand text-xl text-[var(--cream-text)]/50">მიყვარხარ</p>
+  </footer>
+</main>
+
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal-box relative">
+    <button id="modal-close" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center text-[var(--ink)]" aria-label="Close">&times;</button>
+    <img id="modal-img" src="" alt="">
+    <h3 id="modal-title" class="font-hand text-2xl text-[var(--ink)] mb-1"></h3>
+    <p id="modal-date" class="text-xs font-type text-[var(--ink-soft)] mb-5"></p>
+    <div class="border-t border-[var(--ink)]/10 pt-4">
+      <p class="text-xs uppercase tracking-wide text-[var(--ink-soft)] mb-3 font-hand2">notes on this one</p>
+      <div id="comment-list" class="mb-4"></div>
+      <form id="comment-form" class="flex flex-col sm:flex-row gap-2">
+        <input id="comment-name" type="text" placeholder="your name" class="flex-shrink-0 sm:w-28 rounded-lg bg-[var(--ink)]/5 border border-[var(--ink)]/15 px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)]/50 focus:outline-none focus:border-[var(--pin-red)]/50 font-hand2">
+        <input id="comment-text" type="text" placeholder="write the real story here..." class="flex-1 rounded-lg bg-[var(--ink)]/5 border border-[var(--ink)]/15 px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)]/50 focus:outline-none focus:border-[var(--pin-red)]/50 font-hand2" required>
+        <button type="submit" class="scrap-btn rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap font-hand2">add</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   PHOTO LISTS — same system as before. main.html sits in the same folder
+   as your images, so plain filenames work. HEIC/DNG stay skipped until
+   you convert them (browsers can't render either format).
+   ====================================================================== */
+  const ALL_PHOTOS = [
+    "0B577095-9C16-415F-AF1C-C2F767C4573E.jpg",
+    "17BFD445-0DCE-4462-861A-0B238986DE29.jpg",
+    "1B5831D1-1F29-4FD7-BEC8-A7E2B9895AC3.jpg",
+    "73AF3349-F785-4359-9DCA-A2745EC5AA30.jpg",
+    "775352C7-7B64-400A-8A66-20B469171C7D.jpg",
+    "82822E31-36D7-4146-AA35-211FFC5C1777.jpg",
+    "8CC365B5-1FC1-419F-A8CD-075E30C9BAEA.jpg",
+    "94405C0C-2C60-41F8-89EC-3AE055612B72.jpg",
+    "A2345DE4-C6A1-4979-8C58-2D2983E6A020.jpg",
+    "att.0jcnDjTxYX1sqGxBXAUL4dXpwAvXylu4rGclxnZUmZo.jpg",
+    "att.Tc7VejxRfZ9XNrN3TxFXmYsmVafIVVvK1waQhFDKqYA.jpg",
+    "C33F4A50-D992-46F3-833E-2D0451AAA205.jpg",
+    "C7A9210D-6331-4A50-A9E6-D73252205640.jpg",
+    "CF054FE3-852A-422E-9363-A74F9622FCEF.jpg",
+    "D92504DC-149D-4EB5-800B-2DA6BB6997D8.jpg",
+    "DB7403F1-9B7C-4452-822E-B0721C884FE2.jpg",
+    "DB96714B-AA07-4D8C-A376-5DE861389882.jpg",
+    "IMG_1688.jpg", "IMG_1695.jpg", "IMG_2075.jpg", "IMG_2265.jpg",
+    "IMG_2764.jpg", "IMG_2845.jpg", "IMG_3213.jpg",
+    "IMG_3250.jpg", "IMG_3331.jpg", "IMG_3530.jpg", "IMG_3642.jpg",
+    "IMG_3873.PNG", "IMG_4080.jpg", "IMG_4181.jpg",
+    "IMG_4190.jpg", "IMG_4191.jpg", "IMG_4204.jpg", "IMG_4395.jpg",
+    "IMG_4517.jpg", "IMG_4588.jpg", "IMG_4786.jpg", "IMG_4820.PNG",
+    "IMG_4838.jpg", "IMG_4964.PNG", "IMG_5054.jpg", "IMG_5057.jpg",
+    "IMG_5059.jpg", "IMG_5060.jpg", "IMG_5155.jpg", "IMG_5220.jpg",
+    "IMG_5221.jpg", "IMG_5222.jpg", "IMG_5386.jpg", "IMG_5453.jpg",
+    "IMG_5628.PNG", "IMG_5636.PNG",
+    // Found in your folder but weren't listed before — added at the end
+    // so they don't shift any existing photo's position or comments.
+    "IMG_3528_result.png", "IMG_4043_result.png"
+  ];
+
+  // Maps a filename above to the actual file to load, for photos whose
+  // real file on disk has a different name (e.g. resized "_result"
+  // versions, or a PNG that got saved as a JPG). Comment keys still use
+  // the name on the left, so nothing about existing comments shifts.
+  const PHOTO_FILE_OVERRIDES = {
+    "0B577095-9C16-415F-AF1C-C2F767C4573E.jpg": "0B577095-9C16-415F-AF1C-C2F767C4573E_result_result.jpg",
+    "17BFD445-0DCE-4462-861A-0B238986DE29.jpg": "17BFD445-0DCE-4462-861A-0B238986DE29_result_result.jpg",
+    "1B5831D1-1F29-4FD7-BEC8-A7E2B9895AC3.jpg": "1B5831D1-1F29-4FD7-BEC8-A7E2B9895AC3_result_result.jpg",
+    "73AF3349-F785-4359-9DCA-A2745EC5AA30.jpg": "73AF3349-F785-4359-9DCA-A2745EC5AA30_result.jpg",
+    "775352C7-7B64-400A-8A66-20B469171C7D.jpg": "775352C7-7B64-400A-8A66-20B469171C7D_result.jpg",
+    "82822E31-36D7-4146-AA35-211FFC5C1777.jpg": "82822E31-36D7-4146-AA35-211FFC5C1777_result.jpg",
+    "8CC365B5-1FC1-419F-A8CD-075E30C9BAEA.jpg": "8CC365B5-1FC1-419F-A8CD-075E30C9BAEA_result_result.jpg",
+    "94405C0C-2C60-41F8-89EC-3AE055612B72.jpg": "94405C0C-2C60-41F8-89EC-3AE055612B72_result.jpg",
+    "A2345DE4-C6A1-4979-8C58-2D2983E6A020.jpg": "A2345DE4-C6A1-4979-8C58-2D2983E6A020_result.jpg",
+    "att.0jcnDjTxYX1sqGxBXAUL4dXpwAvXylu4rGclxnZUmZo.jpg": "att.0jcnDjTxYX1sqGxBXAUL4dXpwAvXylu4rGclxnZUmZo_result.jpg",
+    "att.Tc7VejxRfZ9XNrN3TxFXmYsmVafIVVvK1waQhFDKqYA.jpg": "att.Tc7VejxRfZ9XNrN3TxFXmYsmVafIVVvK1waQhFDKqYA_result.jpg",
+    "C33F4A50-D992-46F3-833E-2D0451AAA205.jpg": "C33F4A50-D992-46F3-833E-2D0451AAA205_result.jpg",
+    "C7A9210D-6331-4A50-A9E6-D73252205640.jpg": "C7A9210D-6331-4A50-A9E6-D73252205640_result.jpg",
+    "CF054FE3-852A-422E-9363-A74F9622FCEF.jpg": "CF054FE3-852A-422E-9363-A74F9622FCEF_result.jpg",
+    "D92504DC-149D-4EB5-800B-2DA6BB6997D8.jpg": "D92504DC-149D-4EB5-800B-2DA6BB6997D8_result.jpg",
+    "DB7403F1-9B7C-4452-822E-B0721C884FE2.jpg": "DB7403F1-9B7C-4452-822E-B0721C884FE2_result.jpg",
+    "DB96714B-AA07-4D8C-A376-5DE861389882.jpg": "DB96714B-AA07-4D8C-A376-5DE861389882_result.jpg",
+    "IMG_1688.jpg": "IMG_1688_result.jpg",
+    "IMG_1695.jpg": "IMG_1695_result.jpg",
+    "IMG_2075.jpg": "IMG_2075_result.jpg",
+    "IMG_2265.jpg": "IMG_2265_result.jpg",
+    "IMG_2764.jpg": "IMG_2764_result.jpg",
+    "IMG_2845.jpg": "IMG_2845_result.jpg",
+    "IMG_3213.jpg": "IMG_3213_result.jpg",
+    "IMG_3250.jpg": "IMG_3250_result.jpg",
+    "IMG_3331.jpg": "IMG_3331_result.jpg",
+    "IMG_3530.jpg": "IMG_3530_result.jpg",
+    "IMG_3642.jpg": "IMG_3642_result_result.jpg",
+    "IMG_3873.PNG": "IMG_3873_result.png",
+    "IMG_4080.jpg": "IMG_4080_result.jpg",
+    "IMG_4181.jpg": "IMG_4181_result.jpg",
+    "IMG_4190.jpg": "IMG_4190_result.jpg",
+    "IMG_4191.jpg": "IMG_4191_result.jpg",
+    "IMG_4204.jpg": "IMG_4204_result.jpg",
+    "IMG_4395.jpg": "IMG_4395_result.jpg",
+    "IMG_4517.jpg": "IMG_4517_result.jpg",
+    "IMG_4588.jpg": "IMG_4588_result.jpg",
+    "IMG_4786.jpg": "IMG_4786_result.jpg",
+    "IMG_4820.PNG": "IMG_4820_result.jpg",
+    "IMG_4838.jpg": "IMG_4838_result.jpg",
+    "IMG_4964.PNG": "IMG_4964_result.png",
+    "IMG_5054.jpg": "IMG_5054_result.jpg",
+    "IMG_5057.jpg": "IMG_5057_result.jpg",
+    "IMG_5059.jpg": "IMG_5059_result.jpg",
+    "IMG_5060.jpg": "IMG_5060_result.jpg",
+    "IMG_5155.jpg": "IMG_5155_result.jpg",
+    "IMG_5220.jpg": "IMG_5220_result.jpg",
+    "IMG_5221.jpg": "IMG_5221_result.jpg",
+    "IMG_5222.jpg": "IMG_5222_result.jpg",
+    "IMG_5386.jpg": "IMG_5386_result.jpg",
+    "IMG_5453.jpg": "IMG_5453_result.jpg",
+    "IMG_5628.PNG": "IMG_5628_result.jpg",
+    "IMG_5636.PNG": "IMG_5636_result.png"
+  };
+
+  function actualSrc(filename){ return PHOTO_FILE_OVERRIDES[filename] || filename; }
+
+  // Filenames to feature in Kus Tba instead of the main grid — fill in
+  // whichever ones were actually taken there, exact spelling from above.
+  const KUSTBA_PHOTOS = [
+    // "IMG_4517.jpg",
+  ];
+
+  // Optional title/date per filename.
+  const PHOTO_META = {
+    // "IMG_4517.jpg": { title: "the rainy car night", date: "October 2024" },
+  };
+
+  /* ======================================================================
+     LETTER TEXT — edit these three constants to change what she reads.
+     LETTER_PARAGRAPHS is an array: one string per paragraph, plain text
+     (no HTML needed — line breaks between array items become new
+     paragraphs automatically).
+     ====================================================================== */
+  const LETTER_TITLE = "შენთვის...";
+  const LETTER_PARAGRAPHS = [
+    " თათა ძალიან მიყვარხარ, ეს დღეები საშინელება იყო ჩემთვის დღითი დღე ვრწმუნდებოდი, რომ შენს გარეშე სიცოცხლე არ შემიძლია. მესმის შენი, ძალიან ბევრ რამეში ვარ დამნაშავე, მითუმეტეს ბოლო დროს ყურადღებაც მოგაკელი, უბრალოდ გპირდები, რომ არასდროს არ მოგაკლებ ყურადღებას, სადაც არუნდა ვიყო და როგორც. ყოველთვის შენს გვერძე ვიდგები და ყველაფერში დაგეხმარები. მჯერა რომ შენს გამო ყველაფერს გავაკეთებ ყველანაირ კომპლექსა და მიუღებლობას დავძლევ, რათა შენ ჩემთან თავი კარგად იგრძნო. არავინ არ იცის ამ საიტზე და არც არაფერზე რას ვაკეთებ და როგორ (ალბათ სალომეს ვანახებ). ამ ყველაფერს გურწფელად გეუბნები. ეხლაც კი, როდესაც ამას შენთვის ვაკეთებ ის მამშვიდებს, რომ შენთვის ვაკეთებ, თითქოს, ახლოს მყავხარ და სიმშვიდეა სამყაროში. დარწმუნებული ვარ, რომ ძალიან დაგსტრესე, თუმცა ყველაფრისთვის მზად ვარ. მზად ვარ,რომ  გამოვასწორო და პირიქით კარგად იყო ჩემთან. მართლა გურწფელად ყველაფერი გავიაზრე, უბრალოდ მინდა რო შევრიგდეთ და მომცე შანსი რომ განახო, თუ რამდენად მიყვარხარ. 527 დღე... ერთი შეხედვით უბრალოდ დროა, მაგრამ ჩემთვის — მთელი ცხოვრების საუკეთესო მონაკვეთი. ამ ხნის განმავლობაში იმდენი რამ გადავიტანეთ ერთად და იმდ ამ ყველაფერს ვწერ პირდაპირ გულიდან და გულწრფელად... ახლა მართლა ვერ წარმოიდგენ ჩემს თავში რა ხდება. ერთ დროს თითქოს ვმშვიდდები (თუმცა ამ „სიმშვიდის“ დროსაც მაწუხებს რაღაც ღრმად) და უცებ გულში ისევ დანა მესობა."
+ ,
+    "მე შენზე დამოკიდებული არ ვარ უბრალო ჩვევით — ვარ ისე, როგორც დედამიწა ჰაერზე. ეს არ არის ცივი დამოკიდებულება, ეს არის ის მიჯაჭვულობა, რომელიც ნამდვილ სიყვარულს განსაზღვრავს. შენ ხარ ჩემი ჰაერიც, ჩემი სიმშვიდეც და ჩემი ტკივილიც. და მე მზად ვარ, შენს სიყვარულში ეს წუთისოფელი ბოლომდე გავლიო.მე ძალიან გთხოვ, უბრალოდ შანსი მომცე, რომ ყველაფერი გამოვასწორო... (ეხლა 33ა- შოთას ვუსმენ მეც ,საიტზეც მაგიტომ ჩავსვი). ვიცი, რომ გულის სიღრმეში მაინც გიყვარვარ. და მზად ვარ, ეს სიყვარული ისე აგიყვავო, გაგიღვივო, როგორც ვარდი, რომელიც ქართული ოჯახის ეზოშია დარგული — სადღაც რაიონში, სადაც მას ბებია და ბაბუა უპირობო სიყვარულით ზრდიან. ხან ერთი რომ დაასხამს წყალს, ხან მეორე, საღამოს კი ერთად დაჯდებიან ტელევიზორთან და ნელ-ნელა დაეძინებათ ერთმანეთის მხარზე. აი, ასეთი სიმშვიდე, ასეთი უბრალო, მაგრამ სამუდამო ზრუნვა მინდა გამაჩნდეს შენდადმი. მინდა, რომ ჩვენი ურთიერთობაც ასეთივე ხანგრძლივი, ნამდვილი, უდარდელი და გახსნილი იყოს და ერთმანეთთან ყოფნა კი არ გვსტრესავდეს და გვღლიდეს, არამედ ყოველდღე უფრო მეტად გვაახლოვებდეს იმ უზენაეს იდეალთან, რასაც ნამდვილი სიყვარული ჰქვია. უბრალოდ მომეცი შანსი, რომ ეს სიმშვიდე და სითბო გაგრძნობინო."
+,
+    ,"ეს ყველაფერი დავწერე სრულიად მარტო, როგორც ბარათაშვილმა  შემოღამება მთაწმინდაზედ .ეს ყველაფერი ჩემი გულიდან გულდასმით ამოვკრიფე და ამ პატარა მონაწერში ჩავატიე. იმედია ყველაფერი გადმოვეცი რასაც ვგრძნობ და იმედია გაიგებ ამ ყველაფერს. რაც არ უნდა იყოს, ყოველთვის შენთან ვიქნები <3."
+  ];
+  const LETTER_SIGNATURE = "მიყვარხარ";
+
+  const TAPE_COLORS = ['tape-pink','tape-yellow','tape-blue','tape-green'];
+  const ROT_CLASSES = ['rot-1','rot-2','rot-3','rot-4','rot-5','rot-6'];
+
+  function metaFor(filename){ return PHOTO_META[filename] || { title: "გახსენი", date: "" }; }
+
+  function buildCard(filename, index){
+    const meta = metaFor(filename);
+    const key = "photo:" + filename;
+    const rot = ROT_CLASSES[index % ROT_CLASSES.length];
+    const tapeClass = TAPE_COLORS[index % TAPE_COLORS.length];
+    const tapeRotate = (index % 2 === 0) ? -8 : 8;
+
+    const card = document.createElement("div");
+    card.className = "photo-card memory-card relative " + rot;
+    card.dataset.commentsKey = key;
+    card.dataset.title = meta.title;
+    card.dataset.date = meta.date;
+    card.dataset.img = actualSrc(filename);
+    card.innerHTML = `
+      <div class="tape ${tapeClass}" style="width:70px; top:-12px; left:50%; margin-left:-35px; transform:rotate(${tapeRotate}deg);"></div>
+      <img src="${actualSrc(filename)}" alt="memory" loading="lazy">
+      <p class="card-title">${meta.title}</p>
+      <p class="card-date">${meta.date}</p>
+      <span class="comment-pill">💬 <span class="count">0</span></span>`;
+    return card;
+  }
+
+  function renderGrids(){
+    const kustbaGrid = document.getElementById("kustba-grid");
+    const photoGrid = document.getElementById("photo-grid");
+    KUSTBA_PHOTOS.forEach((f,i) => kustbaGrid.appendChild(buildCard(f,i)));
+    ALL_PHOTOS.filter(f => !KUSTBA_PHOTOS.includes(f)).forEach((f,i) => photoGrid.appendChild(buildCard(f,i)));
+  }
+
+  function escapeHtmlText(str){ const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
+  function buildLetter(){
+    document.getElementById('letter-title').textContent = LETTER_TITLE;
+    document.getElementById('letter-signature').textContent = LETTER_SIGNATURE;
+    const container = document.getElementById('letter-text');
+    container.innerHTML = LETTER_PARAGRAPHS.map(paragraph => {
+      const words = escapeHtmlText(paragraph).split(' ').map(w => `<span class="letter-word">${w}</span>`).join(' ');
+      return `<p class="mb-4">${words}</p>`;
+    }).join('');
+  }
+
+/* ======================================================================
+   PARTICLES — warm dust motes, visible mainly over the night sections
+   ====================================================================== */
+(function initParticles(){
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [], width, height;
+  function resize(){ width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+  const COUNT = window.innerWidth < 768 ? 30 : 60;
+  function make(){ return { x: Math.random()*width, y: Math.random()*height, r: Math.random()*1.6+0.4,
+    baseAlpha: Math.random()*0.35+0.1, driftX: (Math.random()-0.5)*0.12, driftY: -Math.random()*0.2-0.04,
+    twinkleSpeed: Math.random()*0.02+0.005, twinklePhase: Math.random()*Math.PI*2 }; }
+  for (let i=0;i<COUNT;i++) particles.push(make());
+  function tick(){
+    ctx.clearRect(0,0,width,height);
+    particles.forEach(p=>{
+      p.x+=p.driftX; p.y+=p.driftY; p.twinklePhase+=p.twinkleSpeed;
+      if (p.y<-10){p.y=height+10;p.x=Math.random()*width;}
+      if (p.x<-10) p.x=width+10; if (p.x>width+10) p.x=-10;
+      const alpha=p.baseAlpha*(0.6+0.4*Math.sin(p.twinklePhase));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(217, 162, 77, ${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ======================================================================
+   ENTRY EXPERIENCE
+   ====================================================================== */
+const enterBtn = document.getElementById('enter-btn');
+const heroSection = document.getElementById('hero');
+const mainContent = document.getElementById('main-content');
+const bgAudio = document.getElementById('bg-audio');
+const audioLabel = document.getElementById('audio-label');
+
+enterBtn.addEventListener('click', () => {
+  bgAudio.volume = 0.45;
+  bgAudio.play().then(()=> setAudioIcon(true)).catch(()=> setAudioIcon(false));
+  const tl = gsap.timeline();
+  tl.to(heroSection, { opacity:0, duration:0.9, ease:'power2.inOut',
+      onComplete: ()=>{ heroSection.style.display='none'; } })
+    .to(mainContent, { opacity:1, duration:1.1, ease:'power2.out' }, "-=0.3")
+    .call(()=>{ initScrollReveals(); });
+});
+
+const audioToggleBtn = document.getElementById('audio-toggle');
+const iconPlay = document.getElementById('icon-play');
+const iconPause = document.getElementById('icon-pause');
+function setAudioIcon(isPlaying){ iconPlay.classList.toggle('hidden', isPlaying); iconPause.classList.toggle('hidden', !isPlaying); }
+bgAudio.addEventListener('error', () => { audioLabel.textContent = 'song link broken — swap src'; });
+audioToggleBtn.addEventListener('click', () => {
+  if (bgAudio.paused) { bgAudio.play().then(()=> setAudioIcon(true)).catch(()=> { audioLabel.textContent = 'tap once more to allow sound'; }); }
+  else { bgAudio.pause(); setAudioIcon(false); }
+});
+
+let revealsInitialized = false;
+function initScrollReveals(){
+  if (revealsInitialized) return; revealsInitialized = true;
+  gsap.registerPlugin(ScrollTrigger);
+  document.querySelectorAll('.reveal').forEach(el=>{
+    gsap.to(el, { opacity:1, y:0, duration:1, ease:'power2.out',
+      scrollTrigger:{ trigger: el, start:'top 85%', toggleActions:'play none none none' } });
+  });
+
+  // Letter words fade in word-by-word once the note scrolls into view —
+  // this is the "she can't miss it" moment.
+  gsap.to('#letter .letter-word', {
+    opacity: 1, y: 0, duration: 0.35, ease: 'power1.out', stagger: 0.035,
+    scrollTrigger: { trigger: '#letter', start: 'top 60%', toggleActions: 'play none none none' }
+  });
+
+  ScrollTrigger.refresh();
+}
+
+document.querySelectorAll('.flip-card').forEach(card=>{
+  card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+});
+
+/* ======================================================================
+   COMMENTS — localStorage per photo (device-local, not synced between people)
+   ====================================================================== */
+const COMMENTS_STORE_KEY = 'our-story-comments-v1';
+function loadAllComments(){ try { return JSON.parse(localStorage.getItem(COMMENTS_STORE_KEY)) || {}; } catch { return {}; } }
+function saveAllComments(data){ localStorage.setItem(COMMENTS_STORE_KEY, JSON.stringify(data)); }
+function getComments(key){ return loadAllComments()[key] || []; }
+function addComment(key, name, text){
+  const all = loadAllComments();
+  if (!all[key]) all[key] = [];
+  all[key].push({ name: name || 'anonymous', text, at: new Date().toISOString() });
+  saveAllComments(all);
+}
+function refreshCommentCounts(){
+  document.querySelectorAll('.memory-card').forEach(card=>{
+    const key = card.dataset.commentsKey;
+    const countEl = card.querySelector('.count');
+    if (countEl) countEl.textContent = getComments(key).length;
+  });
+}
+
+const modalOverlay = document.getElementById('modal-overlay');
+const modalImg = document.getElementById('modal-img');
+const modalTitle = document.getElementById('modal-title');
+const modalDate = document.getElementById('modal-date');
+const commentList = document.getElementById('comment-list');
+const commentForm = document.getElementById('comment-form');
+const commentNameInput = document.getElementById('comment-name');
+const commentTextInput = document.getElementById('comment-text');
+const modalClose = document.getElementById('modal-close');
+let currentKey = null;
+
+function escapeHtml(str){ const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+function renderComments(key){
+  const comments = getComments(key);
+  if (comments.length === 0){ commentList.innerHTML = `<p class="text-sm text-[var(--ink-soft)] italic font-hand2">no notes yet — be the first to write one</p>`; return; }
+  commentList.innerHTML = comments.map(c => `
+    <div class="comment-item"><span class="who">${escapeHtml(c.name)}</span><p class="mt-0.5">${escapeHtml(c.text)}</p></div>
+  `).join('');
+}
+
+function openModal(card){
+  currentKey = card.dataset.commentsKey;
+  modalImg.src = card.dataset.img || '';
+  modalImg.alt = card.dataset.title || '';
+  modalTitle.textContent = card.dataset.title || '';
+  modalDate.textContent = card.dataset.date || '';
+  renderComments(currentKey);
+  modalOverlay.classList.add('active');
+  gsap.fromTo(modalOverlay, {opacity:0}, {opacity:1, duration:0.35, ease:'power2.out'});
+  gsap.fromTo('.modal-box', {scale:0.92, opacity:0}, {scale:1, opacity:1, duration:0.4, ease:'back.out(1.4)'});
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  gsap.to(modalOverlay, { opacity:0, duration:0.3, ease:'power2.in', onComplete: ()=>{
+    modalOverlay.classList.remove('active'); document.body.style.overflow = ''; currentKey = null;
+  }});
+}
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+commentForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentKey) return;
+  const name = commentNameInput.value.trim();
+  const text = commentTextInput.value.trim();
+  if (!text) return;
+  addComment(currentKey, name, text);
+  renderComments(currentKey);
+  refreshCommentCounts();
+  commentTextInput.value = '';
+});
+
+/* ======================================================================
+   INIT
+   ====================================================================== */
+renderGrids();
+buildLetter();
+document.querySelectorAll('.memory-card').forEach(card=>{
+  card.addEventListener('click', ()=> openModal(card));
+});
+refreshCommentCounts();
+</script>
+
+</body>
+</html>
